@@ -30,7 +30,7 @@ def webhook():
     state = user_state.get(chat_id, "start")
 
     if state == "start":
-        send_message(chat_id, "سلام! محاسبه مالیات حقوق یا تبصره ۱۰۰؟")
+        send_message(chat_id, "سلام! محاسبه 1.مالیات حقوق یا 2.تبصره ۱۰۰؟")
         user_state[chat_id] = "waiting_for_type"
 
     elif state == "waiting_for_type":
