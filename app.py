@@ -1,94 +1,89 @@
+
 from flask import Flask, request, jsonify
 import requests
 
 app = Flask(__name__)
 
-# توکن بوت بله خود را در اینجا وارد کنید
-TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
-BALE_API_URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
-WEBHOOK_URL = "https://bale-tax-bot.onrender.com/webhook"  # آدرس webhook ربات
+BALE_TOKEN = "4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY"  # اینجا توکن بله‌ت رو بذار
+BALE_API_URL = f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage"
 
-# معافیت ماهانه 24 میلیون تومان
-TAX_FREE_THRESHOLD = 24000000
+user_state = {}
 
-@app.route('/')
-def home():
-    return 'ربات بله فعال است.'
-    
-def calculate_tax_income(income):
-    """محاسبه مالیات برای درآمد حقوق طبق قوانین 1404"""
-    tax = 0
-    
-    if income <= TAX_FREE_THRESHOLD:
-        return tax  # معاف از مالیات
-    
-    # برای درآمدهای بیشتر از 24 میلیون تومان
-    if income <= 30000000:
-        # 10% مالیات برای درآمد 24 تا 30 میلیون
-        tax = (income - TAX_FREE_THRESHOLD) * 0.10  
-    elif income <= 38000000:
-        # 15% مالیات برای درآمد 30 تا 38 میلیون
-        tax = (income - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10  
-    elif income <= 50000000:
-        # 20% مالیات برای درآمد 38 تا 50 میلیون
-        tax = (income - 38000000) * 0.20 + (38000000 - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10  
-    elif income <= 66667000:
-        # 25% مالیات برای درآمد 50 تا 66.67 میلیون
-        tax = (income - 50000000) * 0.25 + (50000000 - 38000000) * 0.20 + (38000000 - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10  
-    else:
-        # 30% مالیات برای درآمد بیشتر از 66.67 میلیون
-        tax = (income - 66667000) * 0.30 + (66667000 - 50000000) * 0.25 + (50000000 - 38000000) * 0.20 + (38000000 - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10
-
-    return tax
+def send_message(chat_id, text):
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+    requests.post(BALE_API_URL, json=payload)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.get_json()
+    data = request.json
 
-    if 'message' in data:
-        message_text = data['message']['text']
-        user_id = data['message']['author_object_id']
-        
-        # اگر اولین پیام باشد، از کاربر بپرسیم که مالیات حقوق می‌خواهد یا تبصره 100
-        if message_text.lower() == 'شروع':
-            send_message(user_id, "چه نوع مالیاتی می‌خواهید محاسبه کنید؟\n1. مالیات حقوق\n2. مالیات تبصره 100")
-        
-        # اگر کاربر گزینه مالیات حقوق را انتخاب کند
-        elif message_text == '1':
-            send_message(user_id, "لطفا مبلغ حقوق خود را وارد کنید:")
-            # ذخیره وضعیت برای محاسبه مالیات حقوق
-            # این کار را می‌توانید در دیتابیس یا متغیرهای موقت انجام دهید
+    if "message" not in data:
+        return jsonify({"ok": True})
 
-        # اگر کاربر گزینه مالیات تبصره 100 را انتخاب کند
-        elif message_text == '2':
-            send_message(user_id, "لطفا مبلغ فروش خود را وارد کنید:")
-            # ذخیره وضعیت برای محاسبه مالیات تبصره 100
+    message = data["message"]
+    chat_id = message["chat"]["id"]
+    text = message.get("text", "")
 
-        # بررسی اینکه آیا ورودی، مبلغ حقوق است
-        elif message_text.isdigit():
-            income = int(message_text)
-            # در اینجا باید وضعیت مالیاتی را بررسی کنیم که آیا مالیات حقوق است یا تبصره 100
-            # فرض کنیم که اگر انتخاب شده باشد، مالیات حقوق باشد:
-            tax = calculate_tax_income(income)
-            send_message(user_id, f"مالیات شما به مبلغ {income:,} تومان برابر با {tax:,} تومان خواهد بود.")
-        
+    state = user_state.get(chat_id, "start")
+
+    if state == "start":
+        send_message(chat_id, "سلام! محاسبه مالیات حقوق یا تبصره ۱۰۰؟")
+        user_state[chat_id] = "waiting_for_type"
+
+    elif state == "waiting_for_type":
+        if "حقوق" in text:
+            user_state[chat_id] = "waiting_for_income"
+            user_state[chat_id + "_type"] = "salary"
+            send_message(chat_id, "لطفاً حقوق سالانه خود را وارد کنید (مثلاً 600000000):")
+        elif "تبصره" in text:
+            user_state[chat_id] = "waiting_for_income"
+            user_state[chat_id + "_type"] = "t100"
+            send_message(chat_id, "لطفاً مجموع درآمد سالانه خود را وارد کنید (مثلاً 800000000):")
         else:
-            send_message(user_id, "لطفا مبلغ را به درستی وارد کنید.")
+            send_message(chat_id, "لطفاً فقط یکی از این دو گزینه را ارسال کنید: حقوق یا تبصره ۱۰۰")
 
-    return jsonify({'status': 'ok'}), 200
+    elif state == "waiting_for_income":
+        try:
+            income = int(text.replace(",", "").strip())
+            tax_type = user_state.get(chat_id + "_type")
 
-def send_message(user_id, message):
-    """ارسال پیام به کاربر"""
-    url = f"https://api.bale.ai/bot/{TOKEN}/sendMessage"
-    payload = {
-        'user_id': user_id,
-        'text': message
-    }
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, json=payload, headers=headers)
-    return response.json()
+            if tax_type == "salary":
+                tax = calculate_salary_tax(income)
+                send_message(chat_id, f"مالیات حقوق شما: {tax:,} تومان")
+            elif tax_type == "t100":
+                tax = calculate_t100_tax(income)
+                send_message(chat_id, f"مالیات تبصره ۱۰۰ شما: {tax:,} تومان")
+
+            user_state[chat_id] = "start"
+        except ValueError:
+            send_message(chat_id, "لطفاً فقط عدد صحیح وارد کنید")
+
+    return jsonify({"ok": True})
+
+def calculate_salary_tax(income):
+    exempt = 240000000  # معافیت سالانه
+    taxable = max(0, income - exempt)
+    if taxable <= 0:
+        return 0
+    if taxable <= 60000000:
+        return int(taxable * 0.1)
+    elif taxable <= 240000000:
+        return int(60000000 * 0.1 + (taxable - 60000000) * 0.15)
+    elif taxable <= 960000000:
+        return int(60000000 * 0.1 + 180000000 * 0.15 + (taxable - 240000000) * 0.20)
+    else:
+        return int(60000000 * 0.1 + 180000000 * 0.15 + 720000000 * 0.20 + (taxable - 960000000) * 0.30)
+
+def calculate_t100_tax(income):
+    if income <= 360000000:
+        return int(income * 0.04)
+    elif income <= 720000000:
+        return int(income * 0.07)
+    else:
+        return int(income * 0.10)
 
 if __name__ == '__main__':
     app.run(debug=True)
