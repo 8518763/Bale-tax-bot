@@ -34,7 +34,7 @@ def webhook():
         user_state[chat_id] = "waiting_for_type"
 
     elif state == "waiting_for_type":
-        if "حقوق" in text:
+        if send_message_text=='1':
             user_state[chat_id] = "waiting_for_income"
             user_state[chat_id + "_type"] = "salary"
             send_message(chat_id, "لطفاً حقوق سالانه خود را وارد کنید (مثلاً 600000000):")
