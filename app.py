@@ -4,7 +4,6 @@ import requests
 
 app = Flask(__name__)
 
-# توکن رباتت رو اینجا بذار
 TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
 BALE_API_URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
 
@@ -23,7 +22,13 @@ def webhook():
         text = message.get('text', '')
 
         if text.strip() == 'شروع':
-            send_message(user_id, 'سلام! به ربات محاسبه مالیات تبصره ۱۰۰ خوش آمدید.')
+            send_message(user_id, 'آیا می‌خواهید مالیات حقوق یا مالیات تبصره 100 رو محاسبه کنید؟\n1. مالیات حقوق\n2. مالیات تبصره 100')
+        
+        elif text.strip() == '1':  # مالیات حقوق
+            send_message(user_id, 'لطفاً درآمد خود را وارد کنید:')
+        
+        elif text.strip() == '2':  # مالیات تبصره 100
+            send_message(user_id, 'لطفاً شغل و درآمد خود را وارد کنید تا محاسبه انجام شود.')
 
     return '', 200
 
