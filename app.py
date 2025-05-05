@@ -1,84 +1,89 @@
-
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
 
 app = Flask(__name__)
 
-TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
-URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
+# توکن بوت بله خود را در اینجا وارد کنید
+TOKEN = "4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY"
+WEBHOOK_URL = "https://bale-tax-bot.onrender.com/webhook"  # آدرس webhook ربات
 
-user_states = {}
+# معافیت ماهانه 24 میلیون تومان
+TAX_FREE_THRESHOLD = 24000000
 
-def calculate_tax_1404(income):
-    annual_income = income * 12
-    if annual_income <= 288000000:
-        return 0
-    elif annual_income <= 1200000000:
-        return (annual_income - 288000000) * 0.10
-    elif annual_income <= 2520000000:
-        return (1200000000 - 288000000) * 0.10 + (annual_income - 1200000000) * 0.15
-    elif annual_income <= 4200000000:
-        return (1200000000 - 288000000) * 0.10 + (2520000000 - 1200000000) * 0.15 + (annual_income - 2520000000) * 0.20
+def calculate_tax_income(income):
+    """محاسبه مالیات برای درآمد حقوق طبق قوانین 1404"""
+    tax = 0
+    
+    if income <= TAX_FREE_THRESHOLD:
+        return tax  # معاف از مالیات
+    
+    # برای درآمدهای بیشتر از 24 میلیون تومان
+    if income <= 30000000:
+        # 10% مالیات برای درآمد 24 تا 30 میلیون
+        tax = (income - TAX_FREE_THRESHOLD) * 0.10  
+    elif income <= 38000000:
+        # 15% مالیات برای درآمد 30 تا 38 میلیون
+        tax = (income - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10  
+    elif income <= 50000000:
+        # 20% مالیات برای درآمد 38 تا 50 میلیون
+        tax = (income - 38000000) * 0.20 + (38000000 - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10  
+    elif income <= 66667000:
+        # 25% مالیات برای درآمد 50 تا 66.67 میلیون
+        tax = (income - 50000000) * 0.25 + (50000000 - 38000000) * 0.20 + (38000000 - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10  
     else:
-        return (1200000000 - 288000000) * 0.10 + (2520000000 - 1200000000) * 0.15 + (4200000000 - 2520000000) * 0.20 + (annual_income - 4200000000) * 0.30
+        # 30% مالیات برای درآمد بیشتر از 66.67 میلیون
+        tax = (income - 66667000) * 0.30 + (66667000 - 50000000) * 0.25 + (50000000 - 38000000) * 0.20 + (38000000 - 30000000) * 0.15 + (30000000 - TAX_FREE_THRESHOLD) * 0.10
 
-def calculate_tafsare100_tax(income):
-    if income <= 480000000:
-        return income * 0.05
-    elif income <= 1000000000:
-        return income * 0.10
-    elif income <= 2000000000:
-        return income * 0.15
-    else:
-        return income * 0.20
+    return tax
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    if 'message' not in data or 'text' not in data['message']:
-        return 'ok'
 
-    chat_id = data['message']['chat']['id']
-    text = data['message']['text']
-    state = user_states.get(chat_id, 'start')
+    if 'message' in data:
+        message_text = data['message']['text']
+        user_id = data['message']['author_object_id']
+        
+        # اگر اولین پیام باشد، از کاربر بپرسیم که مالیات حقوق می‌خواهد یا تبصره 100
+        if message_text.lower() == 'شروع':
+            send_message(user_id, "چه نوع مالیاتی می‌خواهید محاسبه کنید؟\n1. مالیات حقوق\n2. مالیات تبصره 100")
+        
+        # اگر کاربر گزینه مالیات حقوق را انتخاب کند
+        elif message_text == '1':
+            send_message(user_id, "لطفا مبلغ حقوق خود را وارد کنید:")
+            # ذخیره وضعیت برای محاسبه مالیات حقوق
+            # این کار را می‌توانید در دیتابیس یا متغیرهای موقت انجام دهید
 
-    if state == 'start':
-        user_states[chat_id] = 'choose_type'
-        send_message(chat_id, "سلام! محاسبه کدام نوع مالیات را می‌خواهید؟\n1. مالیات حقوق\n2. تبصره ۱۰۰\nلطفاً عدد 1 یا 2 را وارد کنید.")
-    elif state == 'choose_type':
-        if text == '1':
-            user_states[chat_id] = 'await_salary'
-            send_message(chat_id, "لطفاً حقوق ماهیانه خود را به تومان وارد کنید:")
-        elif text == '2':
-            user_states[chat_id] = 'await_income'
-            send_message(chat_id, "لطفاً درآمد سالانه خود را به تومان وارد کنید:")
+        # اگر کاربر گزینه مالیات تبصره 100 را انتخاب کند
+        elif message_text == '2':
+            send_message(user_id, "لطفا مبلغ فروش خود را وارد کنید:")
+            # ذخیره وضعیت برای محاسبه مالیات تبصره 100
+
+        # بررسی اینکه آیا ورودی، مبلغ حقوق است
+        elif message_text.isdigit():
+            income = int(message_text)
+            # در اینجا باید وضعیت مالیاتی را بررسی کنیم که آیا مالیات حقوق است یا تبصره 100
+            # فرض کنیم که اگر انتخاب شده باشد، مالیات حقوق باشد:
+            tax = calculate_tax_income(income)
+            send_message(user_id, f"مالیات شما به مبلغ {income:,} تومان برابر با {tax:,} تومان خواهد بود.")
+        
         else:
-            send_message(chat_id, "ورودی نامعتبر است. لطفاً فقط عدد 1 یا 2 را وارد کنید.")
-    elif state == 'await_salary':
-        try:
-            income = int(text)
-            tax = calculate_tax_1404(income)
-            send_message(chat_id, f"میزان مالیات سال ۱۴۰۴ شما برابر است با: {int(tax):,} تومان")
-            user_states[chat_id] = 'start'
-        except:
-            send_message(chat_id, "لطفاً یک عدد معتبر وارد کنید.")
-    elif state == 'await_income':
-        try:
-            income = int(text)
-            tax = calculate_tafsare100_tax(income)
-            send_message(chat_id, f"میزان مالیات تبصره ۱۰۰ شما برابر است با: {int(tax):,} تومان")
-            user_states[chat_id] = 'start'
-        except:
-            send_message(chat_id, "لطفاً یک عدد معتبر وارد کنید.")
+            send_message(user_id, "لطفا مبلغ را به درستی وارد کنید.")
 
-    return 'ok'
+    return jsonify({'status': 'ok'}), 200
 
-def send_message(chat_id, text):
+def send_message(user_id, message):
+    """ارسال پیام به کاربر"""
+    url = f"https://api.bale.ai/bot/{TOKEN}/sendMessage"
     payload = {
-        'chat_id': chat_id,
-        'text': text
+        'user_id': user_id,
+        'text': message
     }
-    requests.post(URL, json=payload)
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    return response.json()
 
 if __name__ == '__main__':
     app.run(debug=True)
