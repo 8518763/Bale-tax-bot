@@ -15,6 +15,10 @@ exemption_zones = {
     "محروم": 0.5
 }
 
+@app.route('/', methods=['GET'])
+def index():
+    return 'Hello from Bale bot!'
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
