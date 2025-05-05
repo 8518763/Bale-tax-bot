@@ -19,13 +19,13 @@ def calculate_tax_income(income):
     if income <= 24000000:
         return 0
     elif income <= 72000000:
-        return (income - 24000000)  0.1
+        return (income - 24000000) * 0.1
     elif income <= 120000000:
-        return (income - 72000000)  0.2 + 4800000
+        return (income - 72000000) * 0.2 + 4800000
     elif income <= 180000000:
-        return (income - 120000000)  0.3 + 14400000
+        return (income - 120000000) * 0.3 + 14400000
     else:
-        return (income - 180000000)  0.4 + 32400000
+        return (income - 180000000) * 0.4 + 32400000
 
 # تابع محاسبه مالیات تبصره 100
 def calculate_tax_tab_100(sales):
