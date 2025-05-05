@@ -4,12 +4,17 @@ import requests
 app = Flask(__name__)
 
 # توکن بوت بله خود را در اینجا وارد کنید
-TOKEN = "4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY"
+TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
+BALE_API_URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
 WEBHOOK_URL = "https://bale-tax-bot.onrender.com/webhook"  # آدرس webhook ربات
 
 # معافیت ماهانه 24 میلیون تومان
 TAX_FREE_THRESHOLD = 24000000
 
+@app.route('/')
+def home():
+    return 'ربات بله فعال است.'
+    
 def calculate_tax_income(income):
     """محاسبه مالیات برای درآمد حقوق طبق قوانین 1404"""
     tax = 0
