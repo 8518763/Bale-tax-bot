@@ -5,7 +5,7 @@ import requests
 app = Flask(__name__)
 
 TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
-URL = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
 
 user_states = {}
 
