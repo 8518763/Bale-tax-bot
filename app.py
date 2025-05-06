@@ -45,15 +45,19 @@ def webhook():
     elif state['step'] == 'ask_salary' and state['type'] == 'hoghoogh':
         try:
             salary = int(text)
-            annual = salary * 12
-            if annual <= 120000000:
+            annual = salary 
+            if annual <= 240000000:
                 tax = 0
-            elif annual <= 240000000:
-                tax = (annual - 120000000) * 0.1
-            elif annual <= 360000000:
-                tax = (120000000 * 0.1) + (annual - 240000000) * 0.15
+            elif annual <= 300000000:
+                tax = (annual - 240000000) * 0.1
+            elif annual <= 380000000:
+                tax = (6000000) + (annual - 300000000) * 0.15
+            elif annual <= 500000000:
+                tax = (18000000) + (annual - 380000000) * 0.2
+            elif annual <= 660000000:
+                tax = (42000000) + (annual - 500000000) * 0.25
             else:
-                tax = (120000000 * 0.1) + (120000000 * 0.15) + (annual - 360000000) * 0.2
+                tax = (82000000) + (annual - 660000000) * 0.3
 
             send_message(chat_id, f'میزان مالیات سالانه شما: {int(tax):,} تومان')
             state = {'step': 'start'}
