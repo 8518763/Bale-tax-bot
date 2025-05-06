@@ -10,12 +10,7 @@ BALE_API_URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
 def home():
     return 'ربات بله فعال است.'
     
-def send_message(chat_id, text):
-    data = {
-        'chat_id': chat_id,
-        'text': text
-    }
-    requests.post(BALE_API_URL, json=data)
+
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
