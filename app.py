@@ -3,16 +3,19 @@ import requests
 
 app = Flask(__name__)
 
-TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
-BALE_API_URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
+TOKEN = 'توکن_ربات_بله_اینجا'  # جایگزین کنید
+URL = f'https://bot.bale.ai/{TOKEN}/sendMessage'
 
-@app.route('/')
-def home():
-    return 'ربات بله فعال است.'
-    
+user_states = {}
 
+def send_message(chat_id, text):
+    data = {
+        'chat_id': chat_id,
+        'text': text
+    }
+    requests.post(URL, json=data)
 
-@app.route('/webhook', methods=['POST'])
+@app.route('/', methods=['POST'])
 def webhook():
     data = request.get_json()
     if not data or 'message' not in data:
@@ -23,29 +26,57 @@ def webhook():
 
     state = user_states.get(chat_id, {'step': 'start'})
 
-    
-    if 'message' in data:
-        message = data['message']
-        user_id = message.get('author_object_id') or message.get('chat', {}).get('id')
-        text = message.get('text', '')
+    if text == '/start':
+        send_message(chat_id, 'سلام! نوع مالیاتی که می‌خوای حساب کنی رو انتخاب کن:\n1. حقوق\n2. تبصره ۱۰۰')
+        state['step'] = 'select_type'
 
-        if text.strip() == '/start':
-            send_message(user_id, 'آیا می‌خواهید مالیات حقوق یا مالیات تبصره 100 رو محاسبه کنید؟\n1. مالیات حقوق\n2. مالیات تبصره 100')
-        
-        elif text.strip() == '1':  # مالیات حقوق
-            send_message(user_id, 'لطفاً درآمد خود را وارد کنید:')
-        
-        elif text.strip() == '2':  # مالیات تبصره 100
-            send_message(user_id, 'لطفاً شغل و درآمد خود را وارد کنید تا محاسبه انجام شود.')
+    elif state['step'] == 'select_type':
+        if 'حقوق' in text or text == '1':
+            state['type'] = 'hoghoogh'
+            state['step'] = 'ask_salary'
+            send_message(chat_id, 'حقوق ماهانه‌ات چقدره؟ (مثلاً 12000000)')
+        elif 'تبصره' in text or text == '2':
+            state['type'] = 'tabsare'
+            state['step'] = 'ask_income'
+            send_message(chat_id, 'درآمد سالانه‌ات چقدره؟ (مثلاً 500000000)')
         else:
-            send_message(user_id, 'لطفاً فقط یکی از این دو گزینه را ارسال کنید: حقوق یا تبصره ۱۰۰')
+            send_message(chat_id, 'گزینه نامعتبر. لطفاً عدد 1 یا 2 را وارد کن.')
 
-    return '', 200
+    elif state['step'] == 'ask_salary' and state['type'] == 'hoghoogh':
+        try:
+            salary = int(text)
+            annual = salary * 12
+            if annual <= 120000000:
+                tax = 0
+            elif annual <= 240000000:
+                tax = (annual - 120000000) * 0.1
+            elif annual <= 360000000:
+                tax = (120000000 * 0.1) + (annual - 240000000) * 0.15
+            else:
+                tax = (120000000 * 0.1) + (120000000 * 0.15) + (annual - 360000000) * 0.2
 
-def send_message(chat_id, text):
-    payload = {
-        'chat_id': chat_id,
-        'text': text
-    }
-    response = requests.post(BALE_API_URL, json=payload)
-    print("پاسخ ارسال پیام:", response.status_code, response.text)
+            send_message(chat_id, f'میزان مالیات سالانه شما: {int(tax):,} تومان')
+            state = {'step': 'start'}
+        except ValueError:
+            send_message(chat_id, 'عدد وارد شده معتبر نیست. لطفاً فقط عدد وارد کن.')
+
+    elif state['step'] == 'ask_income' and state['type'] == 'tabsare':
+        try:
+            income = int(text)
+            if income <= 200000000:
+                tax = income * 0.05
+            elif income <= 500000000:
+                tax = income * 0.1
+            else:
+                tax = income * 0.15
+
+            send_message(chat_id, f'میزان مالیات تبصره ۱۰۰ شما: {int(tax):,} تومان')
+            state = {'step': 'start'}
+        except ValueError:
+            send_message(chat_id, 'عدد وارد شده معتبر نیست. لطفاً فقط عدد وارد کن.')
+
+    user_states[chat_id] = state
+    return 'ok'
+
+if __name__ == '__main__':
+    app.run(port=5000)
