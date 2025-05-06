@@ -3,8 +3,8 @@ import requests
 
 app = Flask(__name__)
 
-TOKEN = 'توکن_ربات_بله_اینجا'  # جایگزین کنید
-URL = f'https://bot.bale.ai/{TOKEN}/sendMessage'
+TOKEN = '4303010:qOeO6azOv5o1ej4IEZEdE6HB5nnn3YFe25gBjibY'
+URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
 
 user_states = {}
 
