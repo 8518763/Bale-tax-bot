@@ -9,18 +9,32 @@ BALE_API_URL = f'https://tapi.bale.ai/bot{TOKEN}/sendMessage'
 @app.route('/')
 def home():
     return 'ربات بله فعال است.'
+    
+def send_message(chat_id, text):
+    data = {
+        'chat_id': chat_id,
+        'text': text
+    }
+    requests.post(BALE_API_URL, json=data)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    print("داده دریافتی:", data)
+    if not data or 'message' not in data:
+        return 'no data', 400
 
+    chat_id = data['message']['chat']['id']
+    text = data['message'].get('text', '')
+
+    state = user_states.get(chat_id, {'step': 'start'})
+
+    
     if 'message' in data:
         message = data['message']
         user_id = message.get('author_object_id') or message.get('chat', {}).get('id')
         text = message.get('text', '')
 
-        if text.strip() == 'شروع':
+        if text.strip() == '/start':
             send_message(user_id, 'آیا می‌خواهید مالیات حقوق یا مالیات تبصره 100 رو محاسبه کنید؟\n1. مالیات حقوق\n2. مالیات تبصره 100')
         
         elif text.strip() == '1':  # مالیات حقوق
