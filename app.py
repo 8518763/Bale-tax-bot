@@ -59,7 +59,7 @@ def webhook():
             else:
                 tax = (82000000) + (annual - 660000000) * 0.3
 
-            send_message(chat_id, f'میزان مالیات سالانه شما: {int(tax):,} تومان')
+            send_message(chat_id, f'میزان مالیات ماهیانه شما: {int(tax):,} ریال')
             state = {'step': 'start'}
         except ValueError:
             send_message(chat_id, 'عدد وارد شده معتبر نیست. لطفاً فقط عدد وارد کن.')
@@ -74,7 +74,7 @@ def webhook():
             else:
                 tax = income * 0.15
 
-            send_message(chat_id, f'میزان مالیات تبصره ۱۰۰ شما: {int(tax):,} تومان')
+            send_message(chat_id, f'میزان مالیات تبصره ۱۰۰ شما: {int(tax):,} ریال')
             state = {'step': 'start'}
         except ValueError:
             send_message(chat_id, 'عدد وارد شده معتبر نیست. لطفاً فقط عدد وارد کن.')
