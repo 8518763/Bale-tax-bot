@@ -67,7 +67,9 @@ def webhook():
     elif state['step'] == 'ask_income' and state['type'] == 'tabsare':
         try:
             income = int(text)
-            if income <= 200000000:
+            if income >67200000000:
+                send_message(chat_id, ' شما به دلیل درآمد بیشتر از سقف تعیین شده مشمول نیستین')
+            elif income <= 200000000:
                 tax = income * 0.05
             elif income <= 500000000:
                 tax = income * 0.1
